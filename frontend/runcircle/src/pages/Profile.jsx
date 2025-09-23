@@ -1,20 +1,11 @@
+
+
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const Profile = () => {
   const { user } = useAuth();
   const [data, setData] = useState([]);
-  const [form, setForm] = useState({
-    id: null,
-    first_name: "",
-    last_name: "",
-    gender: "",
-    birthday: "",
-    user_id: "",
-    profile_img: null,
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -43,61 +34,50 @@ const Profile = () => {
     fetchData();
   }, [user]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleToggleStatus = async (id, currentStatus) => {
+    setData((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, status_flag: currentStatus ? 0 : 1 } : u
+      )
+    );
 
     try {
-      const method = isEditing ? "PUT" : "POST";
-      const url = isEditing
-        ? `http://localhost:5000/api/admin/profiles/${form.id}`
-        : "http://localhost:5000/api/admin/profiles";
-
-      const formData = new FormData();
-      formData.append("first_name", form.first_name);
-      formData.append("last_name", form.last_name);
-      formData.append("gender", form.gender);
-      formData.append("birthday", form.birthday);
-
-      if (!isEditing) formData.append("user_id", form.user_id);
-
-      if (form.profile_img instanceof File) {
-        formData.append("profile_img", form.profile_img);
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { Authorization: `Bearer ${user.token}` },
-        body: formData,
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/admin/users/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({ status_flag: currentStatus ? 0 : 1 }),
+        }
+      );
 
       const result = await res.json();
-      if (res.ok) {
-        setShowModal(false);
-        setIsEditing(false);
-        fetchData();
-      } else {
-        alert(result.error || "Action failed");
+      if (!res.ok) {
+        alert(result.error || "Status update failed");
+
+        setData((prev) =>
+          prev.map((u) =>
+            u.id === id ? { ...u, status_flag: currentStatus } : u
+          )
+        );
       }
     } catch (err) {
-      console.error("Submit Error:", err);
+      console.error("Toggle Error:", err);
+
+      setData((prev) =>
+        prev.map((u) =>
+          u.id === id ? { ...u, status_flag: currentStatus } : u
+        )
+      );
     }
   };
 
-  const handleEdit = (profile) => {
-    setForm({
-      ...profile,
-      profile_img: null,
-    });
-    setIsEditing(true);
-    setShowModal(true);
-  };
-
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this profile?")) return;
+    if (!window.confirm("Are you sure you want to delete this profile?"))
+      return;
     try {
       const res = await fetch(
         `http://localhost:5000/api/admin/profiles/${id}`,
@@ -120,31 +100,10 @@ const Profile = () => {
 
   return (
     <div className="p-4 sm:p-6">
-    
       <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
         <h2 className="text-xl sm:text-2xl font-bold">
           {user?.role === "admin" ? "All User Profiles" : "My Profile"}
         </h2>
-        {user?.role === "admin" && (
-          <button
-            onClick={() => {
-              setForm({
-                id: null,
-                first_name: "",
-                last_name: "",
-                gender: "",
-                birthday: "",
-                user_id: "",
-                profile_img: null,
-              });
-              setIsEditing(false);
-              setShowModal(true);
-            }}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 sm:px-4 py-2 rounded shadow text-sm sm:text-base"
-          >
-            + Add Profile
-          </button>
-        )}
       </div>
 
       <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
@@ -158,6 +117,7 @@ const Profile = () => {
               <th className="p-3 text-left font-semibold">Gender</th>
               <th className="p-3 text-left font-semibold">Birthday</th>
               <th className="p-3 text-left font-semibold">Role</th>
+              <th className="p-3 text-left font-semibold">Status</th>
               {user?.role === "admin" && (
                 <th className="p-3 text-center font-semibold">Actions</th>
               )}
@@ -188,14 +148,34 @@ const Profile = () => {
                   {u.birthday ? new Date(u.birthday).toLocaleDateString() : "-"}
                 </td>
                 <td className="p-3">{u.role || "user"}</td>
+                <td className="p-3">
+                  {user?.role === "admin" ? (
+                    <div
+                      onClick={() => handleToggleStatus(u.id, u.status_flag)}
+                      className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all ${
+                        u.status_flag ? "bg-green-500" : "bg-gray-500"
+                      }`}
+                    >
+                      <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                          u.status_flag ? "translate-x-6" : "translate-x-0"
+                        }`}
+                      />
+                    </div>
+                  ) : (
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        u.status_flag
+                          ? "bg-green-100 text-green-900"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                    >
+                      {u.status_flag ? "Active" : "Inactive"}
+                    </span>
+                  )}
+                </td>
                 {user?.role === "admin" && (
                   <td className="p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(u)}
-                      className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                    >
-                      ✏️
-                    </button>
                     <button
                       onClick={() => handleDelete(u.id)}
                       className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
@@ -209,7 +189,6 @@ const Profile = () => {
           </tbody>
         </table>
       </div>
-
       <div className="sm:hidden space-y-4">
         {data.map((u) => (
           <div
@@ -247,15 +226,24 @@ const Profile = () => {
             <p>
               <span className="font-semibold">Role:</span> {u.role || "user"}
             </p>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Status:</span>
+              <div
+                onClick={() => handleToggleStatus(u.id, u.status_flag)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer ${
+                  u.status_flag ? "bg-green-500" : "bg-gray-400"
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                    u.status_flag ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </div>
+            </div>
 
             {user?.role === "admin" && (
               <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  onClick={() => handleEdit(u)}
-                  className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                >
-                  ✏️
-                </button>
                 <button
                   onClick={() => handleDelete(u.id)}
                   className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
@@ -267,95 +255,10 @@ const Profile = () => {
           </div>
         ))}
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
-            <h3 className="text-xl font-semibold mb-4">
-              {isEditing ? "Edit Profile" : "Add Profile"}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="first_name"
-                  placeholder="First Name"
-                  value={form.first_name}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <input
-                  type="text"
-                  name="last_name"
-                  placeholder="Last Name"
-                  value={form.last_name}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <select
-                  name="gender"
-                  value={form.gender}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                >
-                  <option value="">-- Select Gender --</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-
-                <input
-                  type="date"
-                  name="birthday"
-                  value={form.birthday}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                />
-                <input
-                  type="file"
-                  name="profile_img"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setForm({ ...form, profile_img: e.target.files[0] })
-                  }
-                  className="border p-2 rounded w-full col-span-2"
-                />
-
-                {!isEditing && (
-                  <input
-                    type="number"
-                    name="user_id"
-                    placeholder="User ID"
-                    value={form.user_id}
-                    onChange={handleChange}
-                    className="border p-2 rounded w-full col-span-2"
-                    required
-                  />
-                )}
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-gray-400 text-white rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
-                >
-                  {isEditing ? "Update" : "Save"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default Profile;
+
+

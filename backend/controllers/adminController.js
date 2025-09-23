@@ -80,93 +80,21 @@ export const getAllProfiles = (req, res) => {
     res.json(profiles);
   });
 };
-
-export const createProfile = (req, res) => {
-  const { user_id, first_name, last_name, birthday, gender } = req.body;
-  const profileImg = req.file ? `/uploads/${req.file.filename}` : null;
-
-  if (!user_id || !first_name || !last_name) {
-    return res.status(400).json({ error: "Required fields missing" });
-  }
-
-  const query = `
-    INSERT INTO user_profile (user_id, first_name, last_name, birthday, gender, profile_img) 
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
+export const toggleUserStatus = (req, res) => {
+  const { id } = req.params;
+  const { status_flag } = req.body;
 
   db.query(
-    query,
-    [user_id, first_name, last_name, birthday, gender, profileImg],
-    (err, result) => {
+    "UPDATE users SET status_flag = ? WHERE id = ?",
+    [status_flag, id],
+    (err) => {
       if (err) {
         console.error("DB Error:", err);
-        return res.status(500).json({ error: "Failed to create profile" });
+        return res.status(500).json({ error: "Failed to update status" });
       }
-
-      const imgUrl = profileImg
-        ? `${req.protocol}://${req.get("host")}${profileImg}`
-        : null;
-
-      res.json({
-        message: "Profile created successfully",
-        id: result.insertId,
-        profile_img: imgUrl,
-      });
+      res.json({ message: "User status updated successfully" });
     }
   );
-};
-
-export const updateProfile = (req, res) => {
-  const { id } = req.params;
-  const { first_name, last_name, birthday, gender } = req.body;
-  const profileImg = req.file ? `/uploads/${req.file.filename}` : null;
-
-  db.query("SELECT * FROM user_profile WHERE id=?", [id], (err, result) => {
-    if (err) {
-      console.error("DB Error:", err);
-      return res.status(500).json({ error: "Failed to fetch profile" });
-    }
-    if (result.length === 0) {
-      return res.status(404).json({ error: "Profile not found" });
-    }
-
-    const current = result[0];
-
-    const query = `
-      UPDATE user_profile 
-      SET first_name=?, last_name=?, birthday=?, gender=?, profile_img=? 
-      WHERE id=?
-    `;
-
-    db.query(
-      query,
-      [
-        first_name || current.first_name,
-        last_name || current.last_name,
-        birthday || current.birthday,
-        gender || current.gender,
-        profileImg || current.profile_img,
-        id,
-      ],
-      (err2) => {
-        if (err2) {
-          console.error("DB Error:", err2);
-          return res.status(500).json({ error: "Failed to update profile" });
-        }
-
-        const imgUrl = profileImg
-          ? `${req.protocol}://${req.get("host")}${profileImg}`
-          : current.profile_img
-          ? `${req.protocol}://${req.get("host")}${current.profile_img}`
-          : null;
-
-        res.json({
-          message: "Profile updated successfully",
-          profile_img: imgUrl,
-        });
-      }
-    );
-  });
 };
 
 export const deleteProfile = (req, res) => {

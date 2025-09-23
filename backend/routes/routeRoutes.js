@@ -25,8 +25,8 @@ router.get("/sports", getSports);
 router.post("/saved-routes", authMiddleware, saveRoute);
 router.get("/saved-routes", authMiddleware, getSavedRoutes);
 
-/* ------------------ ADMIN ROUTES ------------------ */
 router.get("/admin/routes", adminMiddleware, getAllRoutes);
 router.get("/admin/saved-routes", adminMiddleware, getAllSavedRoutes);
 
 export default router;
+
