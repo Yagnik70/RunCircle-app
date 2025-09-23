@@ -151,3 +151,31 @@ export const getUserActivities = (req, res) => {
     }
   );
 };
+
+
+export const getAllActivities = (req, res) => {
+  db.query(
+    `SELECT a.id, a.start_time, a.end_time, a.duration, a.distance, 
+            s.name as sport, u.name as user_name
+     FROM activities a
+     JOIN sports s ON a.sport_id = s.id
+     JOIN users u ON a.user_id = u.id
+     ORDER BY a.start_time DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch activities" });
+      res.json(rows);
+    }
+  );
+};
+
+
+export const deleteActivity = (req, res) => {
+  const { id } = req.params;
+
+  db.query(`DELETE FROM activities WHERE id = ?`, [id], (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to delete activity" });
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Activity not found" });
+    res.json({ message: "Activity deleted" });
+  });
+};
+
