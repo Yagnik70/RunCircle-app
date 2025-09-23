@@ -1,57 +1,107 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 const Activities = () => {
-  const data = [
-    { id: "A001", user: "John Doe", date: "2023-09-15", distance: "5 km", status: "Completed" },
-    { id: "A002", user: "Jane Smith", date: "2023-09-16", distance: "10 km", status: "Pending" },
-    { id: "A003", user: "Alex Ray", date: "2023-09-17", distance: "7 km", status: "Completed" },
-  ];
+  const { user } = useAuth();
+  const [activities, setActivities] = useState([]);
+  const [error, setError] = useState("");
+
+  const fetchActivities = async () => {
+    try {
+      if (!user?.token) {
+        setError("Token missing. Please login.");
+        return;
+      }
+
+      const res = await fetch("http://localhost:5000/api/activity/all", {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      setActivities(data);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivities();
+  }, [user]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this activity?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/activity/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+
+      if (!res.ok) throw new Error("Failed to delete activity");
+
+      setActivities(activities.filter((a) => a.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Activities</h2>
-        <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-          + Add Activity
-        </button>
-      </div>
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl font-bold mb-4">All Activities</h1>
 
-      <table className="w-full border-collapse border">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-4 py-2">ID</th>
-            <th className="border px-4 py-2">User</th>
-            <th className="border px-4 py-2">Date</th>
-            <th className="border px-4 py-2">Distance</th>
-            <th className="border px-4 py-2">Status</th>
-            <th className="border px-4 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id} className="text-center">
-              <td className="border px-4 py-2">{row.id}</td>
-              <td className="border px-4 py-2">{row.user}</td>
-              <td className="border px-4 py-2">{row.date}</td>
-              <td className="border px-4 py-2">{row.distance}</td>
-              <td className="border px-4 py-2">
-                <span
-                  className={`px-2 py-1 rounded text-white ${
-                    row.status === "Completed" ? "bg-green-500" : "bg-yellow-500"
-                  }`}
-                >
-                  {row.status}
-                </span>
-              </td>
-              <td className="border px-4 py-2">
-                <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  View
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {activities.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-gray-200">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="p-2">ID</th>
+                <th className="p-2">User</th>
+                <th className="p-2">Sport</th>
+                <th className="p-2">Start</th>
+                <th className="p-2">End</th>
+                <th className="p-2">Duration</th>
+                <th className="p-2">Distance</th>
+                <th className="p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activities.map((a) => (
+                <tr key={a.id} className="border-t hover:bg-gray-50">
+                  <td className="p-2">{a.id}</td>
+                  <td className="p-2">{a.user_name || a.user_id}</td>
+                  <td className="p-2">{a.sport}</td>
+                  <td className="p-2">
+                    {a.start_time ? new Date(a.start_time).toLocaleString() : "N/A"}
+                  </td>
+                  <td className="p-2">
+                    {a.end_time ? new Date(a.end_time).toLocaleString() : "Active"}
+                  </td>
+                  <td className="p-2">{a.duration || 0}</td>
+                  <td className="p-2">{a.distance || 0}</td>
+                  <td className="p-2">
+                    <button
+                      onClick={() => handleDelete(a.id)}
+                      className="px-3 py-1 bg-red-500 text-white rounded"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !error && <p>No activities found.</p>
+      )}
     </div>
   );
 };
