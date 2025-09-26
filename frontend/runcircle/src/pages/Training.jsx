@@ -1,6 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import {
+  FaUser,
+  FaEnvelope,
+  FaMapMarkerAlt,
+  FaRuler,
+  FaMedal,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 
 const Training = () => {
   const { user } = useAuth();
@@ -8,6 +16,10 @@ const Training = () => {
   const [savedRoutes, setSavedRoutes] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const [routesPage, setRoutesPage] = useState(1);
+  const [savedRoutesPage, setSavedRoutesPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -18,9 +30,12 @@ const Training = () => {
         const data1 = await res1.json();
         setRoutes(data1);
 
-        const res2 = await fetch("http://localhost:5000/api/admin/saved-routes", {
-          headers: { Authorization: `Bearer ${user?.token}` },
-        });
+        const res2 = await fetch(
+          "http://localhost:5000/api/admin/saved-routes",
+          {
+            headers: { Authorization: `Bearer ${user?.token}` },
+          }
+        );
         const data2 = await res2.json();
         setSavedRoutes(data2);
       } catch (err) {
@@ -31,7 +46,7 @@ const Training = () => {
     };
     if (user) fetchData();
   }, [user]);
-  
+
   const filteredRoutes = routes.filter((r) =>
     [r.first_name, r.last_name, r.email, r.from_location, r.to_location]
       .join(" ")
@@ -53,13 +68,21 @@ const Training = () => {
       .includes(search.toLowerCase())
   );
 
+  const getPaginatedData = (data, page) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    return data.slice(startIndex, startIndex + itemsPerPage);
+  };
+  const totalPagesRoutes = Math.ceil(filteredRoutes.length / itemsPerPage);
+  const totalPagesSaved = Math.ceil(filteredSavedRoutes.length / itemsPerPage);
+
   if (loading) {
-    return <p className="text-center text-gray-500">Loading training data...</p>;
+    return (
+      <p className="text-center text-gray-500">Loading training data...</p>
+    );
   }
 
   return (
     <div className="p-4 space-y-10">
-   
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="font-semibold">Search:</div>
         <input
@@ -72,7 +95,9 @@ const Training = () => {
       </div>
 
       <section>
-        <h2 className="text-xl font-bold mb-4">📍 All Routes</h2>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <FaMapMarkerAlt className="text-blue-500 text-2xl" /> All Routes
+        </h2>
         {filteredRoutes.length === 0 ? (
           <p className="text-gray-500 text-center">🚫 No routes found</p>
         ) : (
@@ -89,9 +114,11 @@ const Training = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRoutes.map((route) => (
+                  {getPaginatedData(filteredRoutes, routesPage).map((route) => (
                     <tr key={route.id} className="border-t hover:bg-gray-50">
-                      <td className="p-2">{route.first_name} {route.last_name}</td>
+                      <td className="p-2">
+                        {route.first_name} {route.last_name}
+                      </td>
                       <td className="p-2">{route.email}</td>
                       <td className="p-2">{route.from_location}</td>
                       <td className="p-2">{route.to_location}</td>
@@ -103,24 +130,77 @@ const Training = () => {
             </div>
 
             <div className="md:hidden space-y-3">
-              {filteredRoutes.map((route) => (
+              {getPaginatedData(filteredRoutes, routesPage).map((route) => (
                 <div
                   key={route.id}
                   className="border rounded-lg p-3 shadow bg-white"
                 >
-                  <p className="font-semibold">👤 {route.first_name} {route.last_name}</p>
-                  <p className="text-sm text-gray-600">📧 {route.email}</p>
-                  <p className="text-sm">📍 {route.from_location} ➝ {route.to_location}</p>
-                  <p className="text-sm">📏 {route.distance_km} km</p>
+                  <p className="font-semibold flex items-center gap-2">
+                    <FaUser className="text-gray-700" /> {route.first_name}{" "}
+                    {route.last_name}
+                  </p>
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <FaEnvelope className="text-blue-500" /> {route.email}
+                  </p>
+                  <p className="text-sm flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-red-700" />{" "}
+                    {route.from_location} ➝ {route.to_location}
+                  </p>
+                  <p className="text-sm flex items-center gap-2">
+                    <FaRuler className="text-pink-500" /> {route.distance_km} km
+                  </p>
                 </div>
               ))}
+            </div>
+
+            <div className="flex justify-between items-center gap-2 mt-3">
+              <div className="flex items-center gap-2">
+                <label className="font-semibold">Items per page:</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(parseInt(e.target.value));
+                    setRoutesPage(1);
+                    setSavedRoutesPage(1);
+                  }}
+                  className="border border-gray-300 rounded-lg px-2 py-1 shadow-sm"
+                >
+                  {[5, 7, 10, 20].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-between items-center gap-2 mt-3">
+                <button
+                  onClick={() => setRoutesPage((p) => Math.max(p - 1, 1))}
+                  disabled={routesPage === 1}
+                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  <FaChevronLeft />
+                </button>
+                <span>
+                  {routesPage} / {totalPagesRoutes}
+                </span>
+                <button
+                  onClick={() =>
+                    setRoutesPage((p) => Math.min(p + 1, totalPagesRoutes))
+                  }
+                  disabled={routesPage === totalPagesRoutes}
+                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  <FaChevronRight />
+                </button>
+              </div>
             </div>
           </>
         )}
       </section>
-
       <section>
-        <h2 className="text-xl font-bold mb-4">💾 Saved Routes</h2>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <FaMedal className="text-yellow-500 text-2xl" /> Saved Routes
+        </h2>
         {filteredSavedRoutes.length === 0 ? (
           <p className="text-gray-500 text-center">🚫 No saved routes found</p>
         ) : (
@@ -138,33 +218,93 @@ const Training = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSavedRoutes.map((sr) => (
-                    <tr key={sr.id} className="border-t hover:bg-gray-50">
-                      <td className="p-2">{sr.first_name} {sr.last_name}</td>
-                      <td className="p-2">{sr.email}</td>
-                      <td className="p-2">{sr.from_location}</td>
-                      <td className="p-2">{sr.to_location}</td>
-                      <td className="p-2">{sr.distance_km} km</td>
-                      <td className="p-2">{sr.sport}</td>
-                    </tr>
-                  ))}
+                  {getPaginatedData(filteredSavedRoutes, savedRoutesPage).map(
+                    (sr) => (
+                      <tr key={sr.id} className="border-t hover:bg-gray-50">
+                        <td className="p-2">
+                          {sr.first_name} {sr.last_name}
+                        </td>
+                        <td className="p-2">{sr.email}</td>
+                        <td className="p-2">{sr.from_location}</td>
+                        <td className="p-2">{sr.to_location}</td>
+                        <td className="p-2">{sr.distance_km} km</td>
+                        <td className="p-2">{sr.sport}</td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </div>
 
             <div className="md:hidden space-y-3">
-              {filteredSavedRoutes.map((sr) => (
-                <div
-                  key={sr.id}
-                  className="border rounded-lg p-3 shadow bg-white"
+              {getPaginatedData(filteredSavedRoutes, savedRoutesPage).map(
+                (sr) => (
+                  <div
+                    key={sr.id}
+                    className="border rounded-lg p-3 shadow bg-white"
+                  >
+                    <p className="font-semibold flex items-center gap-2">
+                      <FaUser className="text-gray-700" /> {sr.first_name}{" "}
+                      {sr.last_name}
+                    </p>
+                    <p className="text-sm text-gray-600 flex items-center gap-2">
+                      <FaEnvelope className="text-blue-500" /> {sr.email}
+                    </p>
+                    <p className="text-sm flex items-center gap-2">
+                      <FaMapMarkerAlt className="text-red-700" />{" "}
+                      {sr.from_location} ➝ {sr.to_location}
+                    </p>
+                    <p className="text-sm flex items-center gap-2">
+                      <FaRuler className="text-pink-500" /> {sr.distance_km} km
+                    </p>
+                    <p className="text-sm flex items-center gap-2">
+                      <FaMedal className="text-yellow-500" /> {sr.sport}
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="flex justify-between items-center gap-2 mt-3">
+              <div className="flex items-center gap-2">
+                <label className="font-semibold">Items per page:</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(parseInt(e.target.value));
+                    setRoutesPage(1);
+                    setSavedRoutesPage(1);
+                  }}
+                  className="border border-gray-300 rounded-lg px-2 py-1 shadow-sm"
                 >
-                  <p className="font-semibold">👤 {sr.first_name} {sr.last_name}</p>
-                  <p className="text-sm text-gray-600">📧 {sr.email}</p>
-                  <p className="text-sm">📍 {sr.from_location} ➝ {sr.to_location}</p>
-                  <p className="text-sm">📏 {sr.distance_km} km</p>
-                  <p className="text-sm">🏅 {sr.sport}</p>
-                </div>
-              ))}
+                  {[5, 7, 10, 20].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-between items-center gap-2 mt-3">
+                <button
+                  onClick={() => setRoutesPage((p) => Math.max(p - 1, 1))}
+                  disabled={routesPage === 1}
+                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  <FaChevronLeft />
+                </button>
+                <span>
+                  {routesPage} / {totalPagesRoutes}
+                </span>
+                <button
+                  onClick={() =>
+                    setRoutesPage((p) => Math.min(p + 1, totalPagesRoutes))
+                  }
+                  disabled={routesPage === totalPagesRoutes}
+                  className="p-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  <FaChevronRight />
+                </button>
+              </div>
             </div>
           </>
         )}
