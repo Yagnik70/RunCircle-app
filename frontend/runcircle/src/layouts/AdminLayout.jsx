@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route,Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 
@@ -7,6 +7,7 @@ import Dashboard from "../pages/Dashboard";
 import Activities from "../pages/Activities";
 import Training from "../pages/Training";
 import Profile from "../pages/Profile";
+import Groups from "../pages/Groups";
 
 const AdminLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,6 +24,7 @@ const AdminLayout = () => {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="activities" element={<Activities />} />
             <Route path="training" element={<Training />} />
+            <Route path="groups" element={<Groups />} />
             <Route path="profile" element={<Profile />} />
           </Routes>
         </main>

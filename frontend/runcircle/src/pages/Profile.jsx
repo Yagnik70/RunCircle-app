@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
@@ -54,10 +52,9 @@ const Profile = () => {
         }
       );
 
-      const result = await res.json();
       if (!res.ok) {
+        const result = await res.json();
         alert(result.error || "Status update failed");
-
         setData((prev) =>
           prev.map((u) =>
             u.id === id ? { ...u, status_flag: currentStatus } : u
@@ -66,7 +63,6 @@ const Profile = () => {
       }
     } catch (err) {
       console.error("Toggle Error:", err);
-
       setData((prev) =>
         prev.map((u) =>
           u.id === id ? { ...u, status_flag: currentStatus } : u
@@ -258,7 +254,4 @@ const Profile = () => {
     </div>
   );
 };
-
 export default Profile;
-
-

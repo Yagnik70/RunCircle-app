@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -10,6 +9,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { TbRouteSquare } from "react-icons/tb";
+import { FaRegBookmark, FaRoad, FaUserFriends, FaUser } from "react-icons/fa";
 
 const Counter = ({ target, duration = 1000, suffix = "" }) => {
   const [count, setCount] = useState(0);
@@ -17,15 +18,17 @@ const Counter = ({ target, duration = 1000, suffix = "" }) => {
   useEffect(() => {
     let start = 0;
     const increment = target / (duration / 16);
+
     const timer = setInterval(() => {
       start += increment;
       if (start >= target) {
-        setCount(target);
+        setCount(parseFloat(target.toFixed(3))); 
         clearInterval(timer);
       } else {
-        setCount(Math.floor(start));
+        setCount(parseFloat(start.toFixed(3))); 
       }
     }, 16);
+
     return () => clearInterval(timer);
   }, [target, duration]);
 
@@ -42,6 +45,7 @@ const Dashboard = () => {
   const [routes, setRoutes] = useState([]);
   const [savedRoutes, setSavedRoutes] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,9 +57,12 @@ const Dashboard = () => {
         const data1 = await res1.json();
         setRoutes(data1);
 
-        const res2 = await fetch("http://localhost:5000/api/admin/saved-routes", {
-          headers: { Authorization: `Bearer ${user?.token}` },
-        });
+        const res2 = await fetch(
+          "http://localhost:5000/api/admin/saved-routes",
+          {
+            headers: { Authorization: `Bearer ${user?.token}` },
+          }
+        );
         const data2 = await res2.json();
         setSavedRoutes(data2);
 
@@ -68,6 +75,10 @@ const Dashboard = () => {
         });
         const data3 = await res3.json();
         setProfiles(user?.role === "admin" ? data3 : [data3]);
+
+        const res4 = await fetch("http://localhost:5000/api/groups");
+        const data4 = await res4.json();
+        setGroups(data4);
       } catch (err) {
         console.error("Dashboard fetch error:", err);
       } finally {
@@ -77,81 +88,119 @@ const Dashboard = () => {
     if (user) fetchAll();
   }, [user]);
 
-  const totalDistance = routes.reduce((sum, r) => sum + (r.distance_km || 0), 0);
+  const totalDistance = routes.reduce(
+    (sum, r) => sum + (r.distance_km || 0),
+    0
+  );
   const recentRoutes = routes.slice(0, 7);
+
+  const savedDistanceData = savedRoutes.reduce((acc, r) => {
+    const userName = `${r.first_name} ${r.last_name}`;
+    if (!acc[userName]) acc[userName] = 0;
+    acc[userName] += r.distance_km || 0;
+    return acc;
+  }, {});
+
+  const chartData = Object.entries(savedDistanceData).map(
+    ([user, TotalKm]) => ({
+      user,
+      TotalKm: parseFloat(TotalKm.toFixed(3)), // formatted
+    })
+  );
 
   if (loading)
     return <p className="text-center text-gray-500">Loading dashboard...</p>;
 
   return (
     <div className="p-4 space-y-10">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white shadow rounded-lg p-4 text-center">
           <h2 className="text-xl sm:text-2xl font-bold">
             <Counter target={routes.length} />
           </h2>
-          <p className="text-gray-500 text-sm sm:text-base">All Routes</p>
+          <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
+            <TbRouteSquare className="text-blue-500 text-2xl sm:text-3xl" /> All
+            Routes
+          </p>
         </div>
 
         <div className="bg-white shadow rounded-lg p-4 text-center">
           <h2 className="text-xl sm:text-2xl font-bold">
             <Counter target={savedRoutes.length} />
           </h2>
-          <p className="text-gray-500 text-sm sm:text-base">Saved Routes</p>
+          <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
+            <FaRegBookmark className="text-pink-500 text-2xl sm:text-3xl" />{" "}
+            Saved Routes
+          </p>
         </div>
 
         <div className="bg-white shadow rounded-lg p-4 text-center">
           <h2 className="text-xl sm:text-2xl font-bold">
             <Counter target={totalDistance} suffix=" km" />
           </h2>
-          <p className="text-gray-500 text-sm sm:text-base">Total Distance</p>
+          <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
+            <FaRoad className="text-green-500 text-2xl sm:text-3xl" /> Total
+            Distance
+          </p>
         </div>
 
         <div className="bg-white shadow rounded-lg p-4 text-center">
           <h2 className="text-xl sm:text-2xl font-bold">
             <Counter target={profiles.length} />
           </h2>
-          <p className="text-gray-500 text-sm sm:text-base">
-            {user?.role === "admin" ? "Users" : "My Profile"}
+          <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
+            {user?.role === "admin" ? (
+              <>
+                <FaUserFriends className="text-purple-500 text-2xl sm:text-3xl" />{" "}
+                Users
+              </>
+            ) : (
+              <>
+                <FaUser className="text-purple-500 text-2xl sm:text-3xl" /> My
+                Profile
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-4 text-center">
+          <h2 className="text-xl sm:text-2xl font-bold">
+            <Counter target={groups.length} />
+          </h2>
+          <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
+            <FaUserFriends className="text-orange-500 text-2xl sm:text-3xl" />{" "}
+            Groups
           </p>
         </div>
       </div>
 
-      {/* Chart */}
       <section>
         <h2 className="text-lg sm:text-xl font-bold mb-4">
-           Distance per Route
+          🏃 Saved Routes - Total KM
         </h2>
-        {recentRoutes.length === 0 ? (
-          <p className="text-gray-500 text-center">No routes available 🚫</p>
+        {chartData.length === 0 ? (
+          <p className="text-gray-500 text-center">No saved routes 🚫</p>
         ) : (
           <div className="bg-white p-4 shadow rounded-lg">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={recentRoutes}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="from_location" />
+                <XAxis dataKey="user" />
                 <YAxis />
-                <Tooltip />
-                <Bar
-                  dataKey="distance_km"
-                  fill="#3b82f6"
-                  radius={[6, 6, 0, 0]}
-                />
+                <Tooltip formatter={(value) => `${value.toFixed(3)} km`} />
+                <Bar dataKey="TotalKm" fill="#1f2c55" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
       </section>
 
-      {/* Recent Routes */}
       <section>
         <h2 className="text-lg sm:text-xl font-bold mb-4">🕒 Recent Routes</h2>
         {recentRoutes.length === 0 ? (
           <p className="text-gray-500 text-center">No recent routes 🚫</p>
         ) : (
           <>
-            {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
@@ -170,13 +219,13 @@ const Dashboard = () => {
                       </td>
                       <td className="p-2">{r.from_location}</td>
                       <td className="p-2">{r.to_location}</td>
-                      <td className="p-2">{r.distance_km} km</td>
+                      <td className="p-2">{r.distance_km?.toFixed(3)} km</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {/* Mobile Cards */}
+
             <div className="md:hidden space-y-3">
               {recentRoutes.map((r) => (
                 <div
@@ -184,8 +233,8 @@ const Dashboard = () => {
                   className="bg-white p-4 shadow rounded-lg space-y-1 text-sm"
                 >
                   <p>
-                    <span className="font-semibold">User:</span>{" "}
-                    {r.first_name} {r.last_name}
+                    <span className="font-semibold">User:</span> {r.first_name}{" "}
+                    {r.last_name}
                   </p>
                   <p>
                     <span className="font-semibold">From:</span>{" "}
@@ -196,7 +245,7 @@ const Dashboard = () => {
                   </p>
                   <p>
                     <span className="font-semibold">Distance:</span>{" "}
-                    {r.distance_km} km
+                    {r.distance_km?.toFixed(3)} km
                   </p>
                 </div>
               ))}
@@ -205,7 +254,6 @@ const Dashboard = () => {
         )}
       </section>
 
-      {/* Users Overview */}
       <section>
         <h2 className="text-lg sm:text-xl font-bold mb-4">
           👤 {user?.role === "admin" ? "Users Overview" : "My Profile"}
@@ -234,9 +282,7 @@ const Dashboard = () => {
                 <p className="text-sm text-gray-500">{p.email}</p>
                 <p className="text-xs text-gray-400">
                   {p.gender || "-"} |{" "}
-                  {p.birthday
-                    ? new Date(p.birthday).toLocaleDateString()
-                    : "-"}
+                  {p.birthday ? new Date(p.birthday).toLocaleDateString() : "-"}
                 </p>
               </div>
             </div>
@@ -248,4 +294,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
