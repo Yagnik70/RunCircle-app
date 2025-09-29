@@ -139,7 +139,7 @@ const Dashboard = () => {
             <Counter target={totalDistance} suffix=" km" />
           </h2>
           <p className="text-gray-500 text-sm sm:text-base flex items-center justify-center gap-2">
-            <FaRoad className="text-green-500 text-2xl sm:text-3xl" /> Total
+            <FaRoad className="text-gray-700 text-2xl sm:text-3xl" /> Total
             Distance
           </p>
         </div>
